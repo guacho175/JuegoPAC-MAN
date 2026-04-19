@@ -13,7 +13,7 @@ import { GameCanvas, GameCanvasHandle } from './components/GameCanvas.tsx';
 import { Dpad } from './components/Dpad.tsx';
 import { Direction, GameState } from './types.ts';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Heart, Play, RefreshCcw, Pause, Terminal, ListOrdered } from 'lucide-react';
+import { Trophy, Heart, Play, RefreshCcw, Pause, Terminal, ListOrdered, Menu, X } from 'lucide-react';
 import NeonMusicPlayer from './components/NeonMusicPlayer';
 
 interface ScoreEntry {
@@ -35,6 +35,20 @@ export default function App() {
 
   const [ranking, setRanking] = useState<ScoreEntry[]>([]);
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
+  const [isRankingOpen, setIsRankingOpen] = useState(false);
+
+  const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
+  const handleTouchStart = (e: React.TouchEvent) => setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    const dx = e.touches[0].clientX - touchStart.x;
+    const dy = e.touches[0].clientY - touchStart.y;
+    if (Math.abs(dx) > 30 || Math.abs(dy) > 30) {
+      setNextDir(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'RIGHT' : 'LEFT') : (dy > 0 ? 'DOWN' : 'UP'));
+      setTouchStart(null);
+    }
+  };
+  const handleTouchEnd = () => setTouchStart(null);
 
   useEffect(() => {
     const loadRanking = async () => {
@@ -154,12 +168,21 @@ export default function App() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col w-full z-10 relative min-h-0">
+        
+        {/* Toggle Ranking Button (Mobile) */}
+        <button 
+          className="lg:hidden absolute top-2 left-2 z-50 p-1.5 glass rounded text-neon-magenta hover:bg-neon-magenta/20 transition-colors"
+          onClick={() => setIsRankingOpen(!isRankingOpen)}
+        >
+          {isRankingOpen ? <X size={20} /> : <Menu size={20} />}
+        </button>
+
         {/* Ranking Sidebar */}
         <motion.aside
           initial={{ x: -50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
+          animate={{ x: isRankingOpen ? 0 : (window.innerWidth < 1024 ? -300 : 0), opacity: 1 }}
           transition={{ delay: 0.3 }}
-          className="w-full lg:absolute lg:left-0 lg:top-0 lg:bottom-0 z-20 lg:w-44 xl:w-52 p-2 sm:p-3 lg:border-r border-t lg:border-t-0 border-slate-800 bg-slate-900/40 backdrop-blur-xl flex flex-col flex-shrink-0"
+          className={`w-56 lg:w-44 xl:w-52 p-2 sm:p-3 lg:border-r border-slate-800 bg-slate-900/90 lg:bg-slate-900/40 backdrop-blur-xl flex flex-col fixed lg:absolute lg:left-0 lg:top-0 lg:bottom-0 top-12 left-2 bottom-20 z-40 rounded-xl lg:rounded-none ${isRankingOpen ? 'flex' : 'hidden lg:flex'}`}
         >
           <div className="flex items-center gap-2 mb-2">
             <ListOrdered className="w-3.5 h-3.5 text-neon-magenta" />
@@ -206,7 +229,12 @@ export default function App() {
         </motion.aside>
 
         {/* Game Area Wrapper */}
-        <main className="flex-1 flex flex-col items-center justify-center w-full h-full p-1 sm:p-2 lg:p-4 overflow-hidden relative bg-[radial-gradient(#1e1e24_1px,transparent_1px)] [background-size:40px_40px]">
+        <main 
+          className="flex-1 flex flex-col items-center justify-center w-full h-full p-1 sm:p-2 lg:p-4 overflow-hidden relative bg-[radial-gradient(#1e1e24_1px,transparent_1px)] [background-size:40px_40px] touch-none"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
           
           <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-4">
             {/* PAC-MAN Inner Elements */}

@@ -86,16 +86,31 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
 
     // Try to turn if nextDir is set and we can
     if (pac.nextDir !== 'STOP' && canTurn(pac.pos, pac.nextDir)) {
+      if (pac.dir !== pac.nextDir) {
+        // Snap when turning to avoid drifting
+        if (['UP', 'DOWN'].includes(pac.nextDir) && ['LEFT', 'RIGHT'].includes(pac.dir)) {
+           pac.pos.x = Math.round(pac.pos.x);
+        } else if (['LEFT', 'RIGHT'].includes(pac.nextDir) && ['UP', 'DOWN'].includes(pac.dir)) {
+           pac.pos.y = Math.round(pac.pos.y);
+        }
+      }
       pac.dir = pac.nextDir;
     }
 
-    // Move Pac-Man
-    const nextPos = getNextPos(pac.pos, pac.dir, pac.speed);
-    if (!isWall(nextPos.x, nextPos.y)) {
-      pac.pos = nextPos;
-    } else {
-      pac.dir = 'STOP';
+    // Move Pac-Man carefully to avoid walls
+    let nextPos = getNextPos(pac.pos, pac.dir, pac.speed);
+    const roundedX = Math.round(pac.pos.x);
+    const roundedY = Math.round(pac.pos.y);
+    let frontX = roundedX; let frontY = roundedY;
+    if (pac.dir === 'RIGHT') frontX++; else if (pac.dir === 'LEFT') frontX--; else if (pac.dir === 'DOWN') frontY++; else if (pac.dir === 'UP') frontY--;
+    
+    if (isWall(frontX, frontY)) {
+      if (pac.dir === 'RIGHT' && nextPos.x > roundedX) { nextPos.x = roundedX; pac.dir = 'STOP'; }
+      else if (pac.dir === 'LEFT' && nextPos.x < roundedX) { nextPos.x = roundedX; pac.dir = 'STOP'; }
+      else if (pac.dir === 'DOWN' && nextPos.y > roundedY) { nextPos.y = roundedY; pac.dir = 'STOP'; }
+      else if (pac.dir === 'UP' && nextPos.y < roundedY) { nextPos.y = roundedY; pac.dir = 'STOP'; }
     }
+    pac.pos = nextPos;
 
     // 2. Consume items
     const gridX = Math.round(pac.pos.x);
@@ -134,14 +149,32 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
         }
       }
 
-      const gNext = getNextPos(ghost.pos, ghost.dir, ghost.speed);
-      if (!isWall(gNext.x, gNext.y)) {
-        ghost.pos = gNext;
+      let gNext = getNextPos(ghost.pos, ghost.dir, ghost.speed);
+      const gRndX = Math.round(ghost.pos.x);
+      const gRndY = Math.round(ghost.pos.y);
+      let gFrontX = gRndX; let gFrontY = gRndY;
+      if (ghost.dir === 'RIGHT') gFrontX++; else if (ghost.dir === 'LEFT') gFrontX--; else if (ghost.dir === 'DOWN') gFrontY++; else if (ghost.dir === 'UP') gFrontY--;
+      
+      if (isWall(gFrontX, gFrontY)) {
+        if (ghost.dir === 'RIGHT' && gNext.x > gRndX) { gNext.x = gRndX; ghost.dir = 'STOP'; }
+        else if (ghost.dir === 'LEFT' && gNext.x < gRndX) { gNext.x = gRndX; ghost.dir = 'STOP'; }
+        else if (ghost.dir === 'DOWN' && gNext.y > gRndY) { gNext.y = gRndY; ghost.dir = 'STOP'; }
+        else if (ghost.dir === 'UP' && gNext.y < gRndY) { gNext.y = gRndY; ghost.dir = 'STOP'; }
+        
+        if (ghost.dir === 'STOP') {
+          ghost.pos = { x: gRndX, y: gRndY };
+          const dirs: Direction[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
+          const possibleDirs = dirs.filter(d => {
+            let fx = gRndX; let fy = gRndY;
+            if (d === 'RIGHT') fx++; else if (d === 'LEFT') fx--; else if (d === 'DOWN') fy++; else if (d === 'UP') fy--;
+            return !isWall(fx, fy);
+          });
+          ghost.dir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)] || 'STOP';
+        } else {
+          ghost.pos = gNext;
+        }
       } else {
-        // Find new dir immediately
-        const dirs: Direction[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-        const possibleDirs = dirs.filter(d => d !== ghost.dir && !isWall(getNextPos(ghost.pos, d, ghost.speed).x, getNextPos(ghost.pos, d, ghost.speed).y));
-        ghost.dir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)] || 'STOP';
+        ghost.pos = gNext;
       }
 
       // 4. Collision Detection
