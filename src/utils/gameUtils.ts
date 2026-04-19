@@ -1,7 +1,7 @@
 import { Direction, Position, GRID_SIZE, MAP_WIDTH, MAP_HEIGHT } from '../types.ts';
 import { INITIAL_MAP } from '../gameConstants.ts';
 
-export const isWall = (x: number, y: number): boolean => {
+export const isWall = (x: number, y: number, mapData: number[][]): boolean => {
   const gridX = Math.floor(x);
   const gridY = Math.floor(y);
 
@@ -9,7 +9,7 @@ export const isWall = (x: number, y: number): boolean => {
     return false; // Allow passing through borders for tunnel effect
   }
 
-  return INITIAL_MAP[gridY][gridX] === 1;
+  return mapData[gridY][gridX] === 1;
 };
 
 export const getNextPos = (pos: Position, dir: Direction, speed: number): Position => {
@@ -30,7 +30,7 @@ export const getNextPos = (pos: Position, dir: Direction, speed: number): Positi
   return { x: nextX, y: nextY };
 };
 
-export const canTurn = (pos: Position, dir: Direction): boolean => {
+export const canTurn = (pos: Position, dir: Direction, mapData: number[][]): boolean => {
   // We can only turn if we are roughly in the center of a tile
   const threshold = 0.2;
   const gridX = Math.round(pos.x);
@@ -54,5 +54,5 @@ export const canTurn = (pos: Position, dir: Direction): boolean => {
   // Boundary check
   if (targetX < 0 || targetX >= MAP_WIDTH || targetY < 0 || targetY >= MAP_HEIGHT) return true;
 
-  return INITIAL_MAP[targetY][targetX] !== 1;
+  return mapData[targetY][targetX] !== 1;
 };

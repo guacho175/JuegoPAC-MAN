@@ -1,7 +1,7 @@
 import { TileType } from './types.ts';
 
 // 0: Empty, 1: Wall, 2: Dot, 3: Power Pellet
-export const INITIAL_MAP: number[][] = [
+const BASE_MAP: number[][] = [
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
   [1,2,2,2,2,2,2,2,2,2,2,2,2,1,1,2,2,2,2,2,2,2,2,2,2,2,2,1],
   [1,2,1,1,1,1,2,1,1,1,1,1,2,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1],
@@ -33,6 +33,33 @@ export const INITIAL_MAP: number[][] = [
   [1,2,1,1,1,1,1,1,1,1,1,1,2,1,1,2,1,1,1,1,1,1,1,1,1,1,2,1],
   [1,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,1],
   [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+];
+
+export const MAPS: number[][][] = [
+  BASE_MAP,
+  // 2: Slight open center
+  BASE_MAP.map((r, y) => r.map((c, x) => (y > 10 && y < 20 && x > 4 && x < 23 && c === 1 && (y < 12 || y > 16 || x < 10 || x > 17) ? 2 : c))),
+  // 3: Vertical corridors open
+  BASE_MAP.map((r, y) => r.map((c, x) => (x % 5 === 0 && x > 2 && x < 25 && c === 1 && (y < 12 || y > 16) ? 2 : c))),
+  // 4: Horizontal blocks removed
+  BASE_MAP.map((r, y) => r.map((c, x) => (y % 4 === 1 && y > 4 && y < 27 && c === 1 && (x < 10 || x > 17) ? 2 : c))),
+  // 5: Very open
+  BASE_MAP.map((r, y) => r.map((c, x) => ((x > 3 && x < 24 && y > 3 && y < 27 && c === 1 && (y < 12 || y > 16 || x < 10 || x > 17)) ? 2 : c))),
+  // 6: Dots instead of some walls
+  BASE_MAP.map((r, y) => r.map((c, x) => ((x === 6 || x === 21) && y > 5 && y < 25 && c === 1 ? 2 : c))),
+  // 7: Inner square cleared
+  BASE_MAP.map((r, y) => r.map((c, x) => (y > 6 && y < 24 && x > 6 && x < 21 && c === 1 && (y < 12 || y > 16 || x < 10 || x > 17) ? 2 : c))),
+  // 8: Chaos
+  BASE_MAP.map((r, y) => r.map((c, x) => (x % 3 === 0 && y % 3 === 0 && y > 4 && c === 1 && (y < 12 || y > 16 || x < 10 || x > 17) ? 2 : c))),
+  // 9: Symmetrical clear
+  BASE_MAP.map((r, y) => r.map((c, x) => (y % 6 === 0 && c === 1 && y > 5 && x > 4 && x < 23 ? 2 : c))),
+  // 10: Empty arena
+  BASE_MAP.map((r, y) => r.map((c, x) => {
+    if (x === 0 || x === 27 || y === 0 || y === 30) return 1;
+    if (y >= 12 && y <= 16 && x >= 10 && x <= 17) return 1; // ghost house
+    if (y === 14 && (x < 6 || x > 21)) return 1; // keep tunnels safe
+    return c === 1 ? 2 : c;
+  }))
 ];
 
 export const COLORS = {

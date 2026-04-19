@@ -1,19 +1,21 @@
 import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { Direction, Position, Entity, GameState, MAP_WIDTH, MAP_HEIGHT, GRID_SIZE } from '../types.ts';
-import { INITIAL_MAP, COLORS, SPEED } from '../gameConstants.ts';
+import { INITIAL_MAP } from '../gameConstants.ts'; // fallback
+import { MAPS, COLORS, SPEED } from '../gameConstants.ts';
 import { getNextPos, canTurn, isWall } from '../utils/gameUtils.ts';
 
 interface GameCanvasProps {
   onStateChange: (state: Partial<GameState>) => void;
   nextDir: Direction;
+  level: number;
 }
 
 export interface GameCanvasHandle {
-  reset: () => void;
+  reset: (newLevel?: number) => void;
   pause: (paused: boolean) => void;
 }
 
-export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onStateChange, nextDir }, ref) => {
+export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onStateChange, nextDir, level }, ref) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
@@ -24,7 +26,7 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
   }, [nextDir]);
 
   // Use refs for engine state to avoid re-renders
-  const mapRef = useRef<number[][]>(JSON.parse(JSON.stringify(INITIAL_MAP)));
+  const mapRef = useRef<number[][]>(JSON.parse(JSON.stringify(MAPS[(level - 1) % MAPS.length] || MAPS[0])));
   const pacmanRef = useRef<Entity>({
     pos: { x: 14, y: 23 },
     dir: 'STOP',
@@ -56,8 +58,9 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
   const [isPaused, setIsPaused] = useState(false);
 
   useImperativeHandle(ref, () => ({
-    reset: () => {
-      mapRef.current = JSON.parse(JSON.stringify(INITIAL_MAP));
+    reset: (newLevel?: number) => {
+      const activeLevel = newLevel ?? level;
+      mapRef.current = JSON.parse(JSON.stringify(MAPS[(activeLevel - 1) % MAPS.length] || MAPS[0]));
       pacmanRef.current.pos = { x: 14, y: 23 };
       pacmanRef.current.dir = 'STOP';
       ghostsRef.current.forEach((g, i) => {
@@ -85,7 +88,7 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
     pac.nextDir = nextDirRef.current;
 
     // Try to turn if nextDir is set and we can
-    if (pac.nextDir !== 'STOP' && canTurn(pac.pos, pac.nextDir)) {
+    if (pac.nextDir !== 'STOP' && canTurn(pac.pos, pac.nextDir, mapRef.current)) {
       if (pac.dir !== pac.nextDir) {
         // Snap when turning to avoid drifting
         if (['UP', 'DOWN'].includes(pac.nextDir) && ['LEFT', 'RIGHT'].includes(pac.dir)) {
@@ -104,7 +107,7 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
     let frontX = roundedX; let frontY = roundedY;
     if (pac.dir === 'RIGHT') frontX++; else if (pac.dir === 'LEFT') frontX--; else if (pac.dir === 'DOWN') frontY++; else if (pac.dir === 'UP') frontY--;
     
-    if (isWall(frontX, frontY)) {
+    if (isWall(frontX, frontY, mapRef.current)) {
       if (pac.dir === 'RIGHT' && nextPos.x > roundedX) { nextPos.x = roundedX; pac.dir = 'STOP'; }
       else if (pac.dir === 'LEFT' && nextPos.x < roundedX) { nextPos.x = roundedX; pac.dir = 'STOP'; }
       else if (pac.dir === 'DOWN' && nextPos.y > roundedY) { nextPos.y = roundedY; pac.dir = 'STOP'; }
@@ -140,9 +143,9 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
       }
 
       // Simple AI: choose random direction at intersections
-      if (canTurn(ghost.pos, ghost.dir)) {
+      if (canTurn(ghost.pos, ghost.dir, mapRef.current)) {
         const dirs: Direction[] = ['UP', 'DOWN', 'LEFT', 'RIGHT'];
-        const possibleDirs = dirs.filter(d => canTurn(ghost.pos, d));
+        const possibleDirs = dirs.filter(d => canTurn(ghost.pos, d, mapRef.current));
         if (possibleDirs.length > 1) {
            // Bias towards Pacman or random
            ghost.dir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)];
@@ -155,7 +158,7 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
       let gFrontX = gRndX; let gFrontY = gRndY;
       if (ghost.dir === 'RIGHT') gFrontX++; else if (ghost.dir === 'LEFT') gFrontX--; else if (ghost.dir === 'DOWN') gFrontY++; else if (ghost.dir === 'UP') gFrontY--;
       
-      if (isWall(gFrontX, gFrontY)) {
+      if (isWall(gFrontX, gFrontY, mapRef.current)) {
         if (ghost.dir === 'RIGHT' && gNext.x > gRndX) { gNext.x = gRndX; ghost.dir = 'STOP'; }
         else if (ghost.dir === 'LEFT' && gNext.x < gRndX) { gNext.x = gRndX; ghost.dir = 'STOP'; }
         else if (ghost.dir === 'DOWN' && gNext.y > gRndY) { gNext.y = gRndY; ghost.dir = 'STOP'; }
@@ -167,7 +170,7 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
           const possibleDirs = dirs.filter(d => {
             let fx = gRndX; let fy = gRndY;
             if (d === 'RIGHT') fx++; else if (d === 'LEFT') fx--; else if (d === 'DOWN') fy++; else if (d === 'UP') fy--;
-            return !isWall(fx, fy);
+            return !isWall(fx, fy, mapRef.current);
           });
           ghost.dir = possibleDirs[Math.floor(Math.random() * possibleDirs.length)] || 'STOP';
         } else {

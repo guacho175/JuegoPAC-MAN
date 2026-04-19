@@ -10,7 +10,6 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameCanvas, GameCanvasHandle } from './components/GameCanvas.tsx';
-import { Dpad } from './components/Dpad.tsx';
 import { Direction, GameState } from './types.ts';
 import { motion, AnimatePresence } from 'motion/react';
 import { Trophy, Heart, Play, RefreshCcw, Pause, Terminal, ListOrdered, Menu, X } from 'lucide-react';
@@ -131,8 +130,17 @@ export default function App() {
 
   const startGame = () => {
     setNextDir('STOP');
-    gameRef.current?.reset();
-    setGameState(prev => ({ ...prev, status: 'PLAYING', lives: 3, score: 0 }));
+    gameRef.current?.reset(1);
+    setGameState(prev => ({ ...prev, status: 'PLAYING', lives: 3, score: 0, level: 1 }));
+  };
+
+  const nextLevel = () => {
+    setNextDir('STOP');
+    setGameState(prev => {
+      const nextLvl = prev.level + 1;
+      setTimeout(() => gameRef.current?.reset(nextLvl), 0);
+      return { ...prev, status: 'PLAYING', level: nextLvl };
+    });
   };
 
   const togglePause = () => {
@@ -276,6 +284,7 @@ export default function App() {
               ref={gameRef}
               onStateChange={onStateUpdate}
               nextDir={nextDir}
+              level={gameState.level}
             />
 
             {/* UI Overlays */}
@@ -333,7 +342,7 @@ export default function App() {
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          onClick={startGame}
+                          onClick={nextLevel}
                           className="w-full py-4 bg-green-500 text-black font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(34,197,94,0.4)]"
                         >
                           <RefreshCcw size={20} /> Siguiente Protocolo
@@ -359,8 +368,6 @@ export default function App() {
                 </motion.div>
               )}
             </AnimatePresence>
-
-            <Dpad onDirectionChange={setNextDir} />
           </div>
         </main>
       </div>
