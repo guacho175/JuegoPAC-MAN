@@ -11,10 +11,17 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameCanvas, GameCanvasHandle } from './components/GameCanvas.tsx';
 import { Dpad } from './components/Dpad.tsx';
-import { AudioPlayer } from './components/AudioPlayer.tsx';
 import { Direction, GameState } from './types.ts';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Heart, Play, RefreshCcw, Pause, Terminal } from 'lucide-react';
+import { Trophy, Heart, Play, RefreshCcw, Pause, Terminal, ListOrdered } from 'lucide-react';
+import NeonMusicPlayer from './components/NeonMusicPlayer';
+
+interface ScoreEntry {
+  name: string;
+  score: number;
+  difficulty?: string;
+  date: string;
+}
 
 export default function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -25,6 +32,42 @@ export default function App() {
     status: 'START',
     powerUpTime: 0
   });
+
+  const [ranking, setRanking] = useState<ScoreEntry[]>([]);
+  const [isLoadingRanking, setIsLoadingRanking] = useState(false);
+
+  useEffect(() => {
+    const loadRanking = async () => {
+      const sheetUrl = "https://sheetdb.io/api/v1/6gn8xetirbn1d" || import.meta.env.VITE_SHEETDB_URL;
+      setIsLoadingRanking(true);
+      if (sheetUrl) {
+        try {
+          const res = await fetch(sheetUrl, { cache: 'no-store' });
+          if (res.ok) {
+            const data: any[] = await res.json();
+            const parsed: ScoreEntry[] = data.map(row => ({
+              name: String(row.name || 'ANON'),
+              score: parseInt(row.score, 10) || 0,
+              difficulty: String(row.difficulty || ''),
+              date: String(row.date || '')
+            }));
+            const sorted = parsed.sort((a, b) => b.score - a.score).slice(0, 10);
+            setRanking(sorted);
+            setIsLoadingRanking(false);
+            return;
+          }
+        } catch (error) {
+          console.error("Fallo conectando a SheetDB", error);
+        }
+      }
+      const saved = JSON.parse(localStorage.getItem('pacman_neon_ranking') || '[]');
+      setRanking(saved);
+      setIsLoadingRanking(false);
+    };
+    loadRanking();
+    window.addEventListener('rankingUpdated', loadRanking);
+    return () => window.removeEventListener('rankingUpdated', loadRanking);
+  }, []);
 
   const [nextDir, setNextDir] = useState<Direction>('STOP');
   const gameRef = useRef<GameCanvasHandle>(null);
@@ -84,160 +127,230 @@ export default function App() {
   };
 
   return (
-    <div className="relative w-full h-screen bg-[#050505] font-sans flex flex-col items-center justify-center overflow-hidden selection:bg-neon-cyan selection:text-black">
-      {/* HUD Header */}
-      <div className="fixed top-0 left-0 w-full p-6 flex justify-between items-center z-30 glass border-b-0">
-        <div className="flex items-center gap-6">
-          <div className="flex flex-col">
-            <span className="text-[10px] uppercase tracking-widest text-white/40 font-mono">Current Logic</span>
-            <div className="flex items-center gap-2">
-              <Terminal size={14} className="text-neon-cyan" />
-              <span className="text-xl font-bold neon-text-cyan tabular-nums">
-                {gameState.score.toString().padStart(6, '0')}
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-col border-l border-white/10 pl-6">
-            <span className="text-[10px] uppercase tracking-widest text-white/40 font-mono">High Sync</span>
-            <div className="flex items-center gap-2">
-              <Trophy size={14} className="text-neon-magenta" />
-              <span className="text-xl font-bold neon-text-magenta tabular-nums">
-                {gameState.highScore.toString().padStart(6, '0')}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4">
-          <div className="flex gap-2 mr-4">
-            {Array.from({ length: gameState.lives }).map((_, i) => (
-              <motion.div
-                key={i}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0 }}
-              >
-                <Heart size={20} className="fill-neon-yellow text-neon-yellow drop-shadow-[0_0_5px_rgba(255,255,0,0.5)]" />
-              </motion.div>
-            ))}
-          </div>
-          <button
-            onClick={togglePause}
-            className="p-2 glass rounded-lg neon-text-cyan hover:bg-white/5 transition-colors"
-          >
-            {gameState.status === 'PAUSED' ? <Play size={20} /> : <Pause size={20} />}
-          </button>
-        </div>
+    <div className="h-screen w-screen overflow-hidden bg-[#0c0c0e] flex flex-col font-sans selection:bg-cyan-500/30 relative">
+      {/* Background Decor */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none opacity-20">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-cyan/20 rounded-full blur-[120px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-magenta/20 rounded-full blur-[120px]" />
       </div>
 
-      {/* Main Game Stage */}
-      <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-4">
-        <div className="mb-4 text-center">
-          <h1 className="text-4xl lg:text-6xl font-extrabold tracking-tighter uppercase italic">
-            PAC-MAN <span className="neon-text-cyan">NEÓN</span>
+      {/* Header */}
+      <motion.header
+        initial={{ y: -50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="w-full pt-1.5 sm:pt-3 pb-1 px-4 flex flex-col items-center z-50 bg-[#0c0c0e]/95 backdrop-blur-md border-b border-slate-900 flex-shrink-0"
+      >
+        <div className="flex items-baseline gap-2 sm:gap-3">
+          <h1 className="text-lg sm:text-2xl font-black italic text-slate-100 tracking-tighter uppercase relative">
+            PAC-MAN
+            <span className="text-neon-cyan mx-1">Neón</span>
+            <span className="absolute -top-1 -right-4 sm:-top-1.5 sm:-right-5 text-[6px] sm:text-[8px] font-mono text-neon-magenta font-bold bg-neon-magenta/10 px-0.5 py-0.2 rounded border border-neon-magenta/20">V1.1</span>
           </h1>
-          <p className="font-mono text-[10px] text-white/30 uppercase tracking-[0.3em] mt-1">Ver. 2026.04 // Neural Network Hack</p>
         </div>
+        <p className="text-slate-500 font-mono tracking-[0.3em] text-[6px] sm:text-[8px] uppercase text-center leading-none">
+          Hecho por <span className="text-neon-cyan font-bold">Galindez</span>
+        </p>
+      </motion.header>
 
-        <GameCanvas
-          ref={gameRef}
-          onStateChange={onStateUpdate}
-          nextDir={nextDir}
-        />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col w-full z-10 relative min-h-0">
+        {/* Ranking Sidebar */}
+        <motion.aside
+          initial={{ x: -50, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ delay: 0.3 }}
+          className="w-full lg:absolute lg:left-0 lg:top-0 lg:bottom-0 z-20 lg:w-44 xl:w-52 p-2 sm:p-3 lg:border-r border-t lg:border-t-0 border-slate-800 bg-slate-900/40 backdrop-blur-xl flex flex-col flex-shrink-0"
+        >
+          <div className="flex items-center gap-2 mb-2">
+            <ListOrdered className="w-3.5 h-3.5 text-neon-magenta" />
+            <h2 className="text-[10px] sm:text-xs font-bold text-slate-100 uppercase tracking-widest italic">Ranking</h2>
+          </div>
+
+          <div className="flex-1 space-y-1.5 overflow-y-auto pr-1 max-h-[90px] lg:max-h-none">
+            {isLoadingRanking ? (
+              <div className="flex flex-col items-center justify-center py-4">
+                <p className="text-[8px] font-mono text-neon-cyan uppercase tracking-widest animate-pulse">Sincronizando...</p>
+              </div>
+            ) : ranking.length > 0 ? (
+              ranking.map((entry, index) => (
+                <div
+                  key={index}
+                  className="group flex flex-col p-1 bg-slate-800/20 border border-slate-700/30 rounded hover:border-neon-magenta/50 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1">
+                      <span className={`font-mono font-black italic text-[10px] ${index < 3 ? 'text-neon-cyan' : 'text-slate-600'}`}>
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[8px] sm:text-[9px] font-bold text-slate-100 uppercase truncate max-w-[50px] sm:max-w-[70px]">{entry.name}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[9px] sm:text-[10px] font-black text-neon-magenta leading-none">{entry.score}</p>
+                    </div>
+                  </div>
+                  {entry.difficulty && (
+                    <div className="flex justify-start ml-3">
+                      <p className="text-[6px] sm:text-[7px] text-slate-500 uppercase tracking-wider">{entry.difficulty}</p>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-2 border border-dashed border-slate-800 rounded">
+                <p className="text-[7px] font-mono text-slate-600 uppercase">Vacío</p>
+              </div>
+            )}
+          </div>
+        </motion.aside>
+
+        {/* Game Area Wrapper */}
+        <main className="flex-1 flex flex-col items-center justify-center w-full h-full p-1 sm:p-2 lg:p-4 overflow-hidden relative bg-[radial-gradient(#1e1e24_1px,transparent_1px)] [background-size:40px_40px]">
+          
+          <div className="relative z-10 w-full h-full flex flex-col items-center justify-center p-4">
+            {/* PAC-MAN Inner Elements */}
+            <div className="w-full max-w-4xl flex justify-between items-center mb-2 z-30 glass p-2 rounded-xl">
+              <div className="flex items-center gap-4">
+                <div className="flex flex-col">
+                  <span className="text-[8px] uppercase tracking-widest text-white/40 font-mono">Current Logic</span>
+                  <div className="flex items-center gap-1">
+                    <Terminal size={12} className="text-neon-cyan" />
+                    <span className="text-lg font-bold text-neon-cyan tabular-nums">
+                      {gameState.score.toString().padStart(6, '0')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col border-l border-white/10 pl-4">
+                  <span className="text-[8px] uppercase tracking-widest text-white/40 font-mono">High Sync</span>
+                  <div className="flex items-center gap-1">
+                    <Trophy size={12} className="text-neon-magenta" />
+                    <span className="text-lg font-bold text-neon-magenta tabular-nums">
+                      {gameState.highScore.toString().padStart(6, '0')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <div className="flex gap-1 mr-2">
+                  {Array.from({ length: gameState.lives }).map((_, i) => (
+                    <Heart key={i} size={14} className="fill-neon-yellow text-neon-yellow" />
+                  ))}
+                </div>
+                <button onClick={togglePause} className="p-1.5 glass rounded-lg text-neon-cyan hover:bg-white/5 transition-colors">
+                  {gameState.status === 'PAUSED' ? <Play size={14} /> : <Pause size={14} />}
+                </button>
+              </div>
+            </div>
+
+            <GameCanvas
+              ref={gameRef}
+              onStateChange={onStateUpdate}
+              nextDir={nextDir}
+            />
+
+            {/* UI Overlays */}
+            <AnimatePresence>
+              {(gameState.status === 'START' || gameState.status === 'GAMEOVER' || gameState.status === 'WIN' || gameState.status === 'PAUSED') && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
+                >
+                  <motion.div
+                    initial={{ scale: 0.9, y: 20 }}
+                    animate={{ scale: 1, y: 0 }}
+                    className="max-w-md w-full glass p-8 rounded-3xl border-neon-cyan/30 text-center"
+                  >
+                    {gameState.status === 'START' && (
+                      <>
+                        <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter">Iniciando Protocolo</h2>
+                        <p className="text-white/60 mb-8 font-light leading-relaxed">
+                          Recupera los <span className="text-neon-magenta font-semibold">Fragmentos de Datos</span> y evita las <span className="text-neon-cyan font-semibold">Anomalías Centinela</span>.
+                        </p>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={startGame}
+                          className="w-full py-4 bg-neon-cyan text-black font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(0,255,255,0.4)]"
+                        >
+                          <Play fill="black" size={20} /> Ejecutar Sesión
+                        </motion.button>
+                      </>
+                    )}
+
+                    {gameState.status === 'GAMEOVER' && (
+                      <>
+                        <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter text-red-500 underline decoration-red-500/50 underline-offset-8">FALLO DE SISTEMA</h2>
+                        <p className="text-white/60 mb-2 font-mono text-xs">LOG: BUFFER_OVERFLOW_PACKETS_LOST</p>
+                        <p className="text-2xl font-bold mb-8 text-neon-magenta">PUNTOS: {gameState.score}</p>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={startGame}
+                          className="w-full py-4 glass text-neon-cyan border-neon-cyan font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 neon-border"
+                        >
+                          <RefreshCcw size={20} /> Reiniciar Núcleo
+                        </motion.button>
+                      </>
+                    )}
+
+                    {gameState.status === 'WIN' && (
+                      <>
+                        <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter text-green-400 underline decoration-green-400/50 underline-offset-8">SISTEMA PURGADO</h2>
+                        <p className="text-white/60 mb-2 font-mono text-xs">LOG: ENCRYPTION_SUCCESS_SECTOR_CLEAR</p>
+                        <p className="text-2xl font-bold mb-8 text-neon-yellow">PUNTOS: {gameState.score}</p>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={startGame}
+                          className="w-full py-4 bg-green-500 text-black font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(34,197,94,0.4)]"
+                        >
+                          <RefreshCcw size={20} /> Siguiente Protocolo
+                        </motion.button>
+                      </>
+                    )}
+
+                    {gameState.status === 'PAUSED' && (
+                      <>
+                        <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter">SESIÓN EN ESPERA</h2>
+                        <p className="text-white/60 mb-8 font-mono text-xs italic">C:\PACMAN_NEON\SYSTEM\SUSPENDED...</p>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={togglePause}
+                          className="w-full py-4 glass text-neon-cyan border-neon-cyan font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 neon-border"
+                        >
+                          <Play fill="currentColor" size={20} /> Reanudar
+                        </motion.button>
+                      </>
+                    )}
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <Dpad onDirectionChange={setNextDir} />
+          </div>
+        </main>
       </div>
 
-      {/* UI Overlays */}
-      <AnimatePresence>
-        {(gameState.status === 'START' || gameState.status === 'GAMEOVER' || gameState.status === 'WIN' || gameState.status === 'PAUSED') && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-6"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="max-w-md w-full glass p-8 rounded-3xl border-neon-cyan/30 text-center"
-            >
-              {gameState.status === 'START' && (
-                <>
-                  <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter">Iniciando Protocolo</h2>
-                  <p className="text-white/60 mb-8 font-light leading-relaxed">
-                    Recupera los <span className="text-neon-magenta font-semibold">Fragmentos de Datos</span> y evita las <span className="text-neon-cyan font-semibold">Anomalías Centinela</span>.
-                  </p>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={startGame}
-                    className="w-full py-4 bg-neon-cyan text-black font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(0,255,255,0.4)]"
-                  >
-                    <Play fill="black" size={20} /> Ejecutar Sesión
-                  </motion.button>
-                </>
-              )}
-
-              {gameState.status === 'GAMEOVER' && (
-                <>
-                  <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter text-red-500 underline decoration-red-500/50 underline-offset-8">FALLO DE SISTEMA</h2>
-                  <p className="text-white/60 mb-2 font-mono text-xs">LOG: BUFFER_OVERFLOW_PACKETS_LOST</p>
-                  <p className="text-2xl font-bold mb-8 neon-text-magenta">PUNTOS: {gameState.score}</p>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={startGame}
-                    className="w-full py-4 glass text-neon-cyan border-neon-cyan font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 neon-border"
-                  >
-                    <RefreshCcw size={20} /> Reiniciar Núcleo
-                  </motion.button>
-                </>
-              )}
-
-              {gameState.status === 'WIN' && (
-                <>
-                  <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter text-green-400 underline decoration-green-400/50 underline-offset-8">SISTEMA PURGADO</h2>
-                  <p className="text-white/60 mb-2 font-mono text-xs">LOG: ENCRYPTION_SUCCESS_SECTOR_CLEAR</p>
-                  <p className="text-2xl font-bold mb-8 neon-text-yellow">PUNTOS: {gameState.score}</p>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={startGame}
-                    className="w-full py-4 bg-green-500 text-black font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(34,197,94,0.4)]"
-                  >
-                    <RefreshCcw size={20} /> Siguiente Protocolo
-                  </motion.button>
-                </>
-              )}
-
-              {gameState.status === 'PAUSED' && (
-                <>
-                  <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter">SESIÓN EN ESPERA</h2>
-                  <p className="text-white/60 mb-8 font-mono text-xs italic">C:\PACMAN_NEON\SYSTEM\SUSPENDED...</p>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={togglePause}
-                    className="w-full py-4 glass text-neon-cyan border-neon-cyan font-black rounded-xl uppercase tracking-widest flex items-center justify-center gap-3 neon-border"
-                  >
-                    <Play fill="currentColor" size={20} /> Reanudar
-                  </motion.button>
-                </>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Controls */}
-      <Dpad onDirectionChange={setNextDir} />
-      <AudioPlayer />
-
-      {/* Background Ambience */}
-      <div className="fixed inset-0 -z-10 opacity-30">
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_50%_50%,#00ffff11,transparent_70%)]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[radial-gradient(circle_at_50%_50%,#ff00ff11,transparent_70%)]" />
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-[radial-gradient(circle_at_50%_50%,#ffff0008,transparent_70%)]" />
+      {/* ── Desktop & Mobile Music Player ── */}
+      <div className="w-full flex-shrink-0 bg-[#0c0c0e]/95 backdrop-blur-md border-t border-slate-900 z-50 sm:fixed sm:bottom-4 sm:right-4 sm:w-72 lg:w-80 sm:bg-transparent sm:backdrop-blur-none sm:border-none sm:flex-shrink">
+        <motion.div
+           initial={{ opacity: 0, y: 20 }}
+           animate={{ opacity: 1, y: 0 }}
+           transition={{ delay: 0.4 }}
+           className="max-w-md mx-auto sm:max-w-none"
+        >
+          <NeonMusicPlayer playLoseTrack={gameState.status === 'GAMEOVER'} isGameStarted={gameState.status === 'PLAYING'} />
+        </motion.div>
       </div>
+
+      {/* Noise Texture */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')] bg-repeat" />
     </div>
   );
 }

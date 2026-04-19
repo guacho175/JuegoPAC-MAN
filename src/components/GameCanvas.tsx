@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useImperativeHandle, forwardRef } from 'react';
 import { Direction, Position, Entity, GameState, MAP_WIDTH, MAP_HEIGHT, GRID_SIZE } from '../types.ts';
-import { INITIAL_MAP, COLORS, SPEED } from '../constants.ts';
+import { INITIAL_MAP, COLORS, SPEED } from '../gameConstants.ts';
 import { getNextPos, canTurn, isWall } from '../utils/gameUtils.ts';
 
 interface GameCanvasProps {

@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "../../../JuegoSerpiente"
+		},
+		{
+			"path": "../../../JuegoTetris"
+		},
+		{
+			"path": "../../../JuegoPong"
+		},
+		{
+			"path": "../../../JuegoArkanoid"
+		},
+		{
+			"path": "../.."
+		},
+		{
+			"path": "../../../JuegoSpaceInvaders-"
+		}
+	],
+	"settings": {}
+}

@@ -1,5 +1,5 @@
 import { Direction, Position, GRID_SIZE, MAP_WIDTH, MAP_HEIGHT } from '../types.ts';
-import { INITIAL_MAP } from '../constants.ts';
+import { INITIAL_MAP } from '../gameConstants.ts';
 
 export const isWall = (x: number, y: number): boolean => {
   const gridX = Math.floor(x);
