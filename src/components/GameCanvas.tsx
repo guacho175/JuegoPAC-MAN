@@ -11,7 +11,7 @@ interface GameCanvasProps {
 }
 
 export interface GameCanvasHandle {
-  reset: (newLevel?: number) => void;
+  reset: (newLevel?: number, keepScore?: boolean) => void;
   pause: (paused: boolean) => void;
 }
 
@@ -58,7 +58,7 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
   const [isPaused, setIsPaused] = useState(false);
 
   useImperativeHandle(ref, () => ({
-    reset: (newLevel?: number) => {
+    reset: (newLevel?: number, keepScore?: boolean) => {
       const activeLevel = newLevel ?? level;
       mapRef.current = JSON.parse(JSON.stringify(MAPS[(activeLevel - 1) % MAPS.length] || MAPS[0]));
       pacmanRef.current.pos = { x: 14, y: 23 };
@@ -66,9 +66,11 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
       ghostsRef.current.forEach((g, i) => {
         g.pos = { x: 12 + i, y: 14 };
       });
-      gameStateRef.current.score = 0;
+      if (!keepScore) {
+        gameStateRef.current.score = 0;
+      }
       gameStateRef.current.status = 'PLAYING';
-      onStateChange({ score: 0, status: 'PLAYING' });
+      onStateChange({ score: gameStateRef.current.score, status: 'PLAYING' });
     },
     pause: (p) => setIsPaused(p)
   }));

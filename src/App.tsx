@@ -12,7 +12,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { GameCanvas, GameCanvasHandle } from './components/GameCanvas.tsx';
 import { Direction, GameState } from './types.ts';
 import { motion, AnimatePresence } from 'motion/react';
-import { Trophy, Heart, Play, RefreshCcw, Pause, Terminal, ListOrdered, Menu, X } from 'lucide-react';
+import { Trophy, Heart, Play, RefreshCcw, Pause, Terminal, ListOrdered, Menu, X, Save, User } from 'lucide-react';
 import NeonMusicPlayer from './components/NeonMusicPlayer';
 
 interface ScoreEntry {
@@ -35,6 +35,9 @@ export default function App() {
   const [ranking, setRanking] = useState<ScoreEntry[]>([]);
   const [isLoadingRanking, setIsLoadingRanking] = useState(false);
   const [isRankingOpen, setIsRankingOpen] = useState(false);
+  const [playerName, setPlayerName] = useState('');
+  const [hasSaved, setHasSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
   const handleTouchStart = (e: React.TouchEvent) => setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
@@ -130,15 +133,41 @@ export default function App() {
 
   const startGame = () => {
     setNextDir('STOP');
+    setHasSaved(false);
+    setPlayerName('');
     gameRef.current?.reset(1);
     setGameState(prev => ({ ...prev, status: 'PLAYING', lives: 3, score: 0, level: 1 }));
+  };
+
+  const saveScore = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!playerName.trim() || isSaving) return;
+    setIsSaving(true);
+    const entryData = {
+      juego: 'pacman',
+      nombre: String(playerName.trim()).substring(0, 25),
+      puntos: gameState.score
+    };
+    const sheetUrl = "https://script.google.com/macros/s/AKfycbwk6I3OvEN4GL1zjBcDvarlN_LVGrKWHXYbFVIOgXOOC1_Us1gEnT0dHIEiEkZLApuV/exec";
+    try {
+      await fetch(sheetUrl, { method: 'POST', body: JSON.stringify(entryData) });
+    } catch (err) {
+      console.error('Error saving:', err);
+    }
+    const entry = { name: entryData.nombre, score: gameState.score, difficulty: '', date: new Date().toLocaleDateString() };
+    const prev = JSON.parse(localStorage.getItem('pacman_neon_ranking') || '[]') as ScoreEntry[];
+    const next = [...prev, entry].sort((a, b) => b.score - a.score).slice(0, 10);
+    localStorage.setItem('pacman_neon_ranking', JSON.stringify(next));
+    setHasSaved(true);
+    setIsSaving(false);
+    window.dispatchEvent(new Event('rankingUpdated'));
   };
 
   const nextLevel = () => {
     setNextDir('STOP');
     setGameState(prev => {
       const nextLvl = prev.level + 1;
-      setTimeout(() => gameRef.current?.reset(nextLvl), 0);
+      setTimeout(() => gameRef.current?.reset(nextLvl, true), 0);
       return { ...prev, status: 'PLAYING', level: nextLvl };
     });
   };
@@ -319,10 +348,34 @@ export default function App() {
                     )}
 
                     {gameState.status === 'GAMEOVER' && (
-                      <>
+                      <div className="w-full text-center">
                         <h2 className="text-4xl font-black mb-2 uppercase italic tracking-tighter text-red-500 underline decoration-red-500/50 underline-offset-8">FALLO DE SISTEMA</h2>
                         <p className="text-white/60 mb-2 font-mono text-xs">LOG: BUFFER_OVERFLOW_PACKETS_LOST</p>
-                        <p className="text-2xl font-bold mb-8 text-neon-magenta">PUNTOS: {gameState.score}</p>
+                        <p className="text-2xl font-bold mb-6 text-neon-magenta">PUNTOS: {gameState.score}</p>
+
+                        {!hasSaved ? (
+                          <form onSubmit={saveScore} className="space-y-2.5 text-left mb-6">
+                            <p className="text-[9px] uppercase font-mono text-white/50 pl-1">Nombre para el ranking</p>
+                            <div className="relative">
+                              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/50" />
+                              <input type="text" value={playerName}
+                                onChange={e => setPlayerName(e.target.value)}
+                                placeholder="TU NOMBRE"
+                                className="w-full bg-black/50 border border-white/20 focus:border-neon-cyan px-9 py-3 rounded-xl
+                                           text-white placeholder:text-white/30 font-mono uppercase text-xs focus:outline-none transition-colors"
+                                maxLength={10} autoFocus />
+                            </div>
+                            <button type="submit" disabled={!playerName.trim() || isSaving}
+                              className="w-full flex items-center justify-center gap-2 py-3 font-bold uppercase
+                                         tracking-widest rounded-xl text-xs text-black transition-all bg-neon-cyan hover:bg-[#00d0d0]
+                                         disabled:opacity-40 disabled:cursor-not-allowed">
+                              {isSaving ? <span className="animate-pulse">Guardando...</span> : <><Save className="w-3.5 h-3.5" /> Guardar Score</>}
+                            </button>
+                          </form>
+                        ) : (
+                          <motion.p initial={{ scale: 0.8 }} animate={{ scale: 1 }} className="font-mono text-xs uppercase text-green-400 py-3">✓ ¡Puntuación guardada!</motion.p>
+                        )}
+
                         <motion.button
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
@@ -331,7 +384,7 @@ export default function App() {
                         >
                           <RefreshCcw size={20} /> Reiniciar Núcleo
                         </motion.button>
-                      </>
+                      </div>
                     )}
 
                     {gameState.status === 'WIN' && (
