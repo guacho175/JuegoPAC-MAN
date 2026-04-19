@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", "Space Grotesk", ui-sans-serif, system-ui;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-neon-cyan: #00ffff;
+  --color-neon-magenta: #ff00ff;
+  --color-neon-yellow: #ffff00;
+  --color-neon-blue: #2121ff;
+}
+
+@layer base {
+  body {
+    @apply bg-[#050505] text-white overflow-hidden;
+    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  }
+}
+
+@layer components {
+  .neon-border {
+    @apply border border-neon-cyan shadow-[0_0_15px_rgba(0,255,255,0.5)];
+  }
+
+  .neon-text-cyan {
+    @apply text-neon-cyan drop-shadow-[0_0_8px_rgba(0,255,255,0.8)];
+  }
+
+  .neon-text-magenta {
+    @apply text-neon-magenta drop-shadow-[0_0_8px_rgba(255,0,255,0.8)];
+  }
+
+  .glass {
+    @apply bg-black/40 backdrop-blur-md border border-white/10;
+  }
+}
+
+/* Custom styles for the D-pad */
+.d-pad-grid {
+  display: grid;
+  grid-template-areas:
+    ". up ."
+    "left center right"
+    ". down .";
+  gap: 0.5rem;
+}
