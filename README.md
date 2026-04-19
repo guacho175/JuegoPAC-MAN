@@ -1,20 +1,34 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 👻 Pac-Man Neón
 
-# Run and deploy your AI Studio app
+![Pac-Man Neón Banner](public/banner.png)
 
-This contains everything you need to run your app locally.
+Una hiper-estilizada versión Cyberpunk del clásico arcade **Pac-Man**. Explora un laberinto vectorizado recuperando fragmentos de datos, mientras esquivas a las anomalías centinela (Fantasmas Inteligentes). Todo renderizado a puro 60 FPS con un motor híbrido y música Lofi/Cyberpunk atmosférica. Este proyecto forma parte de la **Franquicia Neón** y conserva estrictamente la arquitectura táctil-teclado de sus predecesores.
 
-View your app in AI Studio: https://ai.studio/apps/333d6dba-18df-4109-9700-f059b962e9a8
+---
 
-## Run Locally
+## 🕹️ Mecánicas de Juego
 
-**Prerequisites:**  Node.js
+- Mueve a Pac-Man para comer todos los puntos del mapa.
+- Evita que los fantasmas te atrapen, perderás vida.
+- Come los Puntos de Poder (esferas más grandes) para invertir la carga: los fantasmas se volverán vulnerables y podrás comerlos por puntos masivos.
+- El juego monitorea y guarda de manera local tu **High Sync** (Récord Local).
 
+## 💻 Controles Híbridos Universales
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Este motor está cuidadosamente construido para operar fluidamente sin importar desde qué dispositivo juegues:
+
+- **En PC:**
+  - **Arriba / Abajo / Izquierda / Derecha** (o **W / A / S / D**): Cambia de dirección instantáneamente.
+  - **P**: Pausar la partida.
+- **En Móviles:**
+  - **D-Pad Virtual**: Usa la cruceta digital en la zona inferior de la pantalla para realizar los giros dentro del laberinto.
+- **Protección Inteligente:** Los controles previenen el recargo accidental de tu partida (`beforeunload`) para bloquear salidas furtivas por accidente.
+
+## 🛠️ Tecnologías y Arquitectura
+
+Desarrollado bajo el marco visual de la franquicia Neón:
+
+- **React 19 + TypeScript + Vite**: Base SPA ultra rápida y robusta.
+- **Render `<canvas>` de Alto Rendimiento**: Pura manipulación matemática en un `requestAnimationFrame` que independiza el motor físico del DOM.
+- **Tailwind v4 CSS + Motion (Framer)**: Animaciones de HUD, interfaces cristalinas (Glassmorphism) y colores flourescentes neón (`neon-cyan` y `neon-magenta`).
+- **Autoplay Inteligente**: El reproductor musical inicializa solo tras el primer tap para lidiar con el bloqueo de auto-play en navegadores móviles estándar.

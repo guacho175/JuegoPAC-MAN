@@ -18,6 +18,11 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
   const requestRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
 
+  const nextDirRef = useRef<Direction>(nextDir);
+  useEffect(() => {
+    nextDirRef.current = nextDir;
+  }, [nextDir]);
+
   // Use refs for engine state to avoid re-renders
   const mapRef = useRef<number[][]>(JSON.parse(JSON.stringify(INITIAL_MAP)));
   const pacmanRef = useRef<Entity>({
@@ -77,7 +82,7 @@ export const GameCanvas = forwardRef<GameCanvasHandle, GameCanvasProps>(({ onSta
 
     // 1. Update Pac-Man
     const pac = pacmanRef.current;
-    pac.nextDir = nextDir;
+    pac.nextDir = nextDirRef.current;
 
     // Try to turn if nextDir is set and we can
     if (pac.nextDir !== 'STOP' && canTurn(pac.pos, pac.nextDir)) {
