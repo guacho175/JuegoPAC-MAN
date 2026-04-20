@@ -1,9 +1,15 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Outfit", "Space Grotesk", ui-sans-serif, system-ui;
+  --font-sans: "Space Grotesk", ui-sans-serif, system-ui;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --color-magenta-500: #ff00ff;
+  --color-magenta-600: #d000d0;
+  --color-cyan-400: #00ffff;
+  --color-cyan-600: #00cccc;
+  --color-lime-400: #39ff14;
 
   --color-neon-cyan: #00ffff;
   --color-neon-magenta: #ff00ff;
@@ -12,9 +18,11 @@
 }
 
 @layer base {
-  body {
-    @apply bg-[#050505] text-white overflow-hidden;
-    font-feature-settings: "ss01", "ss02", "cv01", "cv02";
+  html, body {
+    @apply bg-[#0c0c0e] text-slate-100 antialiased;
+    overflow: hidden !important;
+    touch-action: none !important;
+    overscroll-behavior: none;
   }
 }
 
@@ -44,4 +52,10 @@
     "left center right"
     ". down .";
   gap: 0.5rem;
+}
+
+canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
